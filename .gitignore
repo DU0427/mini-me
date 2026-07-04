@@ -1,0 +1,14 @@
+node_modules/
+dist/
+dist-electron/
+*.log
+.DS_Store
+
+# 根目录是 src/renderer/index.html 的副本
+/index.html
+
+# 未使用的 3D 模型文件
+public/models/michelle.glb
+public/models/robot.glb
+public/models/robot2.glb
+public/models/xbot.glb

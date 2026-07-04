@@ -1,0 +1,37 @@
+{
+  "name": "minime",
+  "version": "1.0.0",
+  "main": "dist-electron/main/main.js",
+  "scripts": {
+    "build:renderer": "vite build",
+    "build:main": "vite build --config vite.main.config.ts",
+    "build": "npm run build:renderer && npm run build:main",
+    "start": "npx electron .",
+    "dev": "concurrently -k \"vite build --config vite.main.config.ts --watch\" \"vite build --watch\" \"wait-on dist/index.html dist-electron/main/main.js && nodemon --watch dist-electron --watch dist -e js,html --delay 1 --exec \\\"npx electron .\\\"\""
+  },
+  "keywords": [
+    "desktop",
+    "companion",
+    "minime"
+  ],
+  "author": "",
+  "license": "MIT",
+  "description": "minime - 一个住在你桌面上的 3D 小分身",
+  "dependencies": {
+    "active-win": "^8.2.1",
+    "three": "^0.185.1",
+    "uiohook-napi": "^1.5.5"
+  },
+  "devDependencies": {
+    "@types/three": "^0.185.0",
+    "concurrently": "^10.0.3",
+    "electron": "^41.7.1",
+    "node-abi": "^3.93.0",
+    "nodemon": "^3.1.14",
+    "typescript": "^6.0.3",
+    "vite": "^6.4.3",
+    "vite-plugin-electron": "^1.1.0",
+    "vite-plugin-electron-renderer": "^1.0.0",
+    "wait-on": "^9.0.10"
+  }
+}
