@@ -31,6 +31,7 @@ const DEFAULT_SETTINGS: MinimeSettings = {
   drinkInterval: 45,
   standInterval: 60,
   eyeRestInterval: 30,
+  skin: 'default',
 }
 
 function loadSettings(): MinimeSettings {

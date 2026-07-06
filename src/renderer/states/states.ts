@@ -8,21 +8,21 @@ export const STATE_CONFIGS: Record<MinimeState, StateConfig> = {
   [MinimeState.Idle]: {
     state: MinimeState.Idle,
     label: '待机',
-    duration: 2000,
+    duration: 500,
     priority: 0,
     canInterrupt: true,
   },
   [MinimeState.Typing]: {
     state: MinimeState.Typing,
     label: '打字中',
-    duration: 500,
+    duration: 300,
     priority: 2,
     canInterrupt: true,
   },
   [MinimeState.Thinking]: {
     state: MinimeState.Thinking,
     label: '思考中',
-    duration: 3000,
+    duration: 1200,
     priority: 1,
     canInterrupt: true,
   },
@@ -43,7 +43,7 @@ export const STATE_CONFIGS: Record<MinimeState, StateConfig> = {
   [MinimeState.Walking]: {
     state: MinimeState.Walking,
     label: '走动',
-    duration: 1500,
+    duration: 800,
     priority: 1,
     canInterrupt: true,
   },

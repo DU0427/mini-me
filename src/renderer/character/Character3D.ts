@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { MiniMeAvatar, MiniMeState, ReminderKind } from './MiniMeAvatar'
+import { MiniMeAvatar, MiniMeState, ReminderKind, SkinName } from './MiniMeAvatar'
 
 // ============================================================
 // Character3D — 适配器：接入 MiniMeAvatar Q版小人
@@ -55,6 +55,9 @@ export class Character3D {
   setWalking() { this.isTyping=false; this.isThinking=false; this.isSleeping=false; this.avatar.setState('idle') }
   setPropsVisible(_v: boolean) {}
   setMonitorTexture(_d: string) {}
+
+  setSkin(name: SkinName) { this.avatar.setSkin(name) }
+  getSkin(): SkinName { return this.avatar.getSkin() }
 
   update(deltaTime: number, time: number) {
     this.avatar.update(Math.min(deltaTime, 0.1), time)

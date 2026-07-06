@@ -79,6 +79,9 @@ export class MinimeApp {
       ipcRenderer.on('settings:updated', (_event: any, settings: MinimeSettings) => {
         console.log('[minime] 设置已更新:', settings)
         this.reminderManager.updateSettings(settings)
+        if (settings.skin && this.character) {
+          this.character.setSkin(settings.skin as any)
+        }
       })
     }
 
@@ -212,6 +215,7 @@ export class MinimeApp {
       }
     })
 
+    this.overlay.innerHTML = ''
     this.overlay.appendChild(bubble)
     this.overlay.classList.add('visible')
 
@@ -226,7 +230,10 @@ export class MinimeApp {
   private hideReminderBubble() {
     const bubble = document.getElementById('reminder-bubble')
     if (bubble) {
-      bubble.remove()
+      bubble.style.animation = 'pop-out 0.2s cubic-bezier(0.4, 0, 0.2, 1) forwards'
+      setTimeout(() => {
+        bubble.remove()
+      }, 200)
     }
     this.overlay.classList.remove('visible')
   }
@@ -325,6 +332,9 @@ export class MinimeApp {
       const settings: MinimeSettings = await ipcRenderer.invoke('settings:get')
       if (settings) {
         this.reminderManager.updateSettings(settings)
+        if (settings.skin && this.character) {
+          this.character.setSkin(settings.skin as any)
+        }
       }
     } catch (e) {
       console.error('[minime] 加载设置失败:', e)

@@ -24,38 +24,69 @@
     #three-canvas { width: 100%; height: 100%; display: block; pointer-events: auto; }
 
     /* ============================================================
-       提醒气泡 — 简洁紧凑
+       提醒气泡 — 类型配色 + 优雅动画
        ============================================================ */
     #ui-overlay {
       position: absolute;
-      top: 8px; left: 50%; transform: translateX(-50%);
+      top: 50%; left: 50%; transform: translate(-50%, -50%);
       pointer-events: none; opacity: 0;
-      transition: opacity 0.3s ease; z-index: 20;
+      transition: none; z-index: 20;
+      width: 100%; display: flex; justify-content: center;
     }
     #ui-overlay.visible { opacity: 1; }
 
     .reminder-bubble {
       display: flex;
       align-items: center;
-      gap: 6px;
-      background: rgba(0, 0, 0, 0.55);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      border-radius: 20px;
-      padding: 5px 12px 5px 8px;
+      gap: 8px;
+      background: rgba(20, 20, 30, 0.75);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-radius: 14px;
+      padding: 8px 14px 8px 10px;
       white-space: nowrap;
       pointer-events: auto;
       cursor: pointer;
-      animation: bubble-in 0.3s ease;
+      border: 1px solid rgba(255,255,255,0.08);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.06);
+      animation: pop-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+      position: relative;
+      overflow: hidden;
     }
-    .reminder-bubble .bubble-icon { font-size: 13px; }
+    /* 类型左色条 */
+    .reminder-bubble::before {
+      content: ''; position: absolute; left: 0; top: 0;
+      width: 3px; height: 100%; border-radius: 3px 0 0 3px;
+    }
+    .reminder-bubble.type-drink_water::before { background: #60B0FF; }
+    .reminder-bubble.type-stand_up::before { background: #FFAA44; }
+    .reminder-bubble.type-late_night::before { background: #818CF8; }
+    .reminder-bubble.type-eye_rest::before { background: #34D399; }
+
+    /* 图标圆底 */
+    .reminder-bubble .bubble-icon {
+      width: 28px; height: 28px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; flex-shrink: 0;
+    }
+    .reminder-bubble.type-drink_water .bubble-icon { background: rgba(96,176,255,0.2); }
+    .reminder-bubble.type-stand_up .bubble-icon { background: rgba(255,170,68,0.2); }
+    .reminder-bubble.type-late_night .bubble-icon { background: rgba(129,140,248,0.2); }
+    .reminder-bubble.type-eye_rest .bubble-icon { background: rgba(52,211,153,0.2); }
+
     .reminder-bubble .bubble-msg {
-      font-size: 11px; font-weight: 500;
-      color: rgba(255, 255, 255, 0.9);
+      font-size: 12px; font-weight: 500;
+      color: rgba(255, 255, 255, 0.92);
+      letter-spacing: 0.2px;
     }
-    @keyframes bubble-in {
-      from { opacity: 0; transform: translateY(-6px); }
-      to { opacity: 1; transform: translateY(0); }
+
+    @keyframes pop-in {
+      from { opacity: 0; transform: scale(0.85) translateY(-8px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    @keyframes pop-out {
+      from { opacity: 1; transform: scale(1) translateY(0); }
+      to { opacity: 0; transform: scale(0.85) translateY(-8px); }
     }
   </style>
 </head>

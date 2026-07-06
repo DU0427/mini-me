@@ -59,7 +59,7 @@ export class SensorHub extends EventEmitter {
     this.mouse.start()
     this.window.start()
 
-    // 每 200ms 合并数据发送
+    // 每 50ms 合并数据发送（提升响应速度）
     this.intervalId = setInterval(() => {
       const data: SensorData = {
         keyboardActivity: this.lastKeyboard.activity,
@@ -73,7 +73,7 @@ export class SensorHub extends EventEmitter {
       }
 
       this.emit('data', data)
-    }, 200)
+    }, 50)
 
     console.log('[SensorHub] 传感器系统已启动')
   }

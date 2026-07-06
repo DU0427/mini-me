@@ -7,6 +7,65 @@ import * as THREE from 'three'
 
 export type MiniMeState = 'idle' | 'typing' | 'thinking' | 'drink' | 'stretch' | 'sleepy' | 'focus' | 'privacy' | 'reminding'
 export type ReminderKind = 'drink_water' | 'stand_up' | 'late_night' | 'eye_rest'
+export type SkinName = 'default' | 'sakura' | 'mint' | 'sunset' | 'starry'
+
+interface SkinPalette {
+  skin: string; skinShade: string; skinDark: string
+  skinLight: string
+  body: string; bodyShade: string; bodyDark: string
+  bodyLight: string
+  white: string; pupil: string; shine: string
+  blush: string; mouth: string; shadow: string
+  bgGlow: string
+}
+
+const SKINS: Record<SkinName, SkinPalette> = {
+  default: {
+    skin: '#FFE8D6', skinShade: '#F0C8A0', skinDark: '#E0B088',
+    skinLight: '#FFF5EB',
+    body: '#C4B5FD', bodyShade: '#A78BFA', bodyDark: '#8B5CF6',
+    bodyLight: '#DDD6FE',
+    white: '#FFFFFF', pupil: '#2D2D4A', shine: '#FFFFFF',
+    blush: 'rgba(255,150,150,0.40)', mouth: '#E07070', shadow: 'rgba(0,0,0,0.08)',
+    bgGlow: 'rgba(196,181,253,0.06)',
+  },
+  sakura: {
+    skin: '#FFF0E8', skinShade: '#F5D0C0', skinDark: '#E8B8A0',
+    skinLight: '#FFF8F5',
+    body: '#F43F5E', bodyShade: '#E11D48', bodyDark: '#BE123C',
+    bodyLight: '#FDA4AF',
+    white: '#FFF5F5', pupil: '#4A1A1A', shine: '#FFFFFF',
+    blush: 'rgba(255,60,60,0.50)', mouth: '#D03030', shadow: 'rgba(0,0,0,0.08)',
+    bgGlow: 'rgba(244,63,94,0.07)',
+  },
+  mint: {
+    skin: '#E8F5E8', skinShade: '#C8E0C0', skinDark: '#A8C8A0',
+    skinLight: '#F0FFF0',
+    body: '#059669', bodyShade: '#047857', bodyDark: '#065F46',
+    bodyLight: '#6EE7B7',
+    white: '#F0FFF0', pupil: '#0A2E1A', shine: '#FFFFFF',
+    blush: 'rgba(50,180,100,0.35)', mouth: '#2D7A4A', shadow: 'rgba(0,0,0,0.08)',
+    bgGlow: 'rgba(5,150,105,0.07)',
+  },
+  sunset: {
+    skin: '#FFF0E0', skinShade: '#F5D4A0', skinDark: '#E8BC78',
+    skinLight: '#FFF8F0',
+    body: '#EA580C', bodyShade: '#D24D09', bodyDark: '#B84408',
+    bodyLight: '#FDBA74',
+    white: '#FFF8F0', pupil: '#3A2010', shine: '#FFFFFF',
+    blush: 'rgba(255,140,60,0.40)', mouth: '#C07030', shadow: 'rgba(0,0,0,0.08)',
+    bgGlow: 'rgba(234,88,12,0.07)',
+  },
+  starry: {
+    skin: '#E0E0F0', skinShade: '#C0C0D8', skinDark: '#A0A0C0',
+    skinLight: '#F0F0FF',
+    body: '#4338CA', bodyShade: '#3730A3', bodyDark: '#2C267C',
+    bodyLight: '#818CF8',
+    white: '#F0F0FF', pupil: '#10103A', shine: '#FFFFFF',
+    blush: 'rgba(100,100,255,0.35)', mouth: '#5050A0', shadow: 'rgba(0,0,0,0.10)',
+    bgGlow: 'rgba(67,56,202,0.07)',
+  },
+}
 
 export class MiniMeAvatar {
   public group: THREE.Group
@@ -20,13 +79,32 @@ export class MiniMeAvatar {
   private eyeOpen: number = 1
   private time: number = 0
   private reminderKind: ReminderKind = 'drink_water'
+  private currentSkin: SkinName = 'default'
 
-  private readonly C = {
-    skin: '#FFE8D6', skinShade: '#F0C8A0', skinDark: '#E0B088',
-    body: '#C4B5FD', bodyShade: '#A78BFA', bodyDark: '#8B5CF6',
-    white: '#FFFFFF', pupil: '#2D2D4A', shine: '#FFFFFF',
-    blush: 'rgba(255,150,150,0.40)', mouth: '#E07070',
-    shadow: 'rgba(0,0,0,0.08)',
+  private C: SkinPalette = SKINS.default
+
+  setSkin(name: SkinName) {
+    this.currentSkin = name
+    this.C = SKINS[name]
+    // 立即重绘当前状态
+    this.redraw()
+  }
+
+  getSkin(): SkinName { return this.currentSkin }
+
+  private redraw() {
+    switch (this.currentState) {
+      case 'idle': this.drawIdle(); break
+      case 'typing': this.drawTyping(); break
+      case 'thinking': this.drawThinking(); break
+      case 'drink': this.drawDrink(); break
+      case 'stretch': this.drawStretch(); break
+      case 'sleepy': this.drawSleepy(); break
+      case 'focus': this.drawFocus(); break
+      case 'privacy': this.drawPrivacy(); break
+      case 'reminding': this.drawReminding(); break
+    }
+    this.sprite.material.map!.needsUpdate = true
   }
 
   constructor() {
@@ -96,6 +174,13 @@ export class MiniMeAvatar {
   private drawShadow() {
     const c = this.ctx
     c.save()
+    // 背景光晕（肤色）
+    const gg = c.createRadialGradient(256, 280, 50, 256, 300, 260)
+    gg.addColorStop(0, this.C.bgGlow)
+    gg.addColorStop(0.5, this.C.bgGlow.replace('0.06','0.03').replace('0.07','0.035').replace('0.08','0.04').replace('0.10','0.05'))
+    gg.addColorStop(1, 'transparent')
+    c.fillStyle = gg; c.fillRect(0, 0, 512, 512)
+    // 地面阴影
     c.beginPath(); c.ellipse(256, 460, 110, 22, 0, 0, Math.PI*2)
     c.fillStyle = this.C.shadow; c.fill()
     c.beginPath(); c.ellipse(256, 462, 150, 16, 0, 0, Math.PI*2)
@@ -109,7 +194,7 @@ export class MiniMeAvatar {
     c.save()
     c.translate(256, 400); c.scale(1, scaleY); c.translate(-256, -400)
     const g = c.createRadialGradient(240, 370, 20, 256, 410, 100)
-    g.addColorStop(0, '#DDD6FE')
+    g.addColorStop(0, this.C.bodyLight)
     g.addColorStop(0.5, this.C.body)
     g.addColorStop(1, this.C.bodyDark)
     this.rr(178, 310, 156, 180, 78)
@@ -128,7 +213,7 @@ export class MiniMeAvatar {
     // 主圆 + 渐变
     c.beginPath(); c.arc(256, 180, 120, 0, Math.PI*2)
     const g = c.createRadialGradient(220, 140, 20, 256, 180, 120)
-    g.addColorStop(0, '#FFF5EB')
+    g.addColorStop(0, this.C.skinLight)
     g.addColorStop(0.5, this.C.skin)
     g.addColorStop(1, this.C.skinDark)
     c.fillStyle = g; c.fill()

@@ -54,6 +54,7 @@ export interface MinimeSettings {
   drinkInterval: number     // 喝水提醒间隔（分钟）
   standInterval: number     // 久坐提醒间隔（分钟）
   eyeRestInterval: number   // 远眺提醒间隔（分钟）
+  skin: string              // 皮肤名称
 }
 
 /** IPC 通道名称 */
