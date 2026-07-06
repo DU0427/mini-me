@@ -1,6 +1,7 @@
-import { MinimeState, SensorData } from '../../shared/types'
+import { MinimeState, SensorData, ReminderType } from '../../shared/types'
 import { STATE_CONFIGS, STATE_RULES } from './states'
 import { Character3D } from '../character/Character3D'
+import { ReminderKind } from '../character/MiniMeAvatar'
 
 // ============================================================
 // 状态机 - 管理角色状态切换
@@ -91,13 +92,18 @@ export class StateMachine {
         this.character.setIdle()
         break
       case MinimeState.Typing:
+        this.character.setSitting(true)
+        this.character.setTyping()
+        break
       case MinimeState.Thinking:
+        this.character.setSitting(true)
+        this.character.setThinking()
+        break
       case MinimeState.Reminding:
         this.character.setSitting(true)
-        // setTyping/setThinking/setReminding 已内部调用 setPropsVisible
+        this.character.setReminding(this.currentReminderKind)
         break
     }
-    // 根据具体状态设置动作
     switch (newState) {
       case MinimeState.Idle: break // 已在上面设置
       case MinimeState.Typing: this.character.setTyping(); break
@@ -114,7 +120,10 @@ export class StateMachine {
   }
 
   /** 强制切换到提醒状态 */
-  forceReminding() {
+  private currentReminderKind: ReminderKind = 'drink_water'
+
+  forceReminding(kind?: ReminderKind) {
+    if (kind) this.currentReminderKind = kind
     this.transitionTo(MinimeState.Reminding)
   }
 

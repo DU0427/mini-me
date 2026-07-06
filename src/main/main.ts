@@ -16,8 +16,8 @@ let screenCapture: ScreenCapture | null = null
 let stats: DailyStats | null = null
 let isQuitting = false
 
-const WINDOW_WIDTH = 200
-const WINDOW_HEIGHT = 280
+const WINDOW_WIDTH = 135
+const WINDOW_HEIGHT = 185
 
 function createWindow() {
   const { width: screenWidth, height: screenHeight } = screen.getPrimaryDisplay().workArea

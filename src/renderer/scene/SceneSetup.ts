@@ -12,15 +12,15 @@ export class SceneSetup {
   constructor(canvas: HTMLCanvasElement) {
     this.scene = new THREE.Scene()
 
-    // 2.5D 正交相机
+    // 2.5D 正交相机 — viewSize 匹配窗口尺寸，角色居中
     const aspect = canvas.width / canvas.height
-    const viewSize = 1.8
+    const viewSize = 1.2
     this.camera = new THREE.OrthographicCamera(
       -viewSize * aspect, viewSize * aspect,
       viewSize, -viewSize, 0.1, 10
     )
-    this.camera.position.set(0, 0.5, 1.8)
-    this.camera.lookAt(0, 0.2, 0)
+    this.camera.position.set(0, 0.55, 1.8)
+    this.camera.lookAt(0, 0.30, 0)
 
     // 渲染器
     this.renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true })
@@ -68,7 +68,7 @@ export class SceneSetup {
     const w = canvas.clientWidth, h = canvas.clientHeight
     if (w === 0 || h === 0) return
     this.renderer.setSize(w, h, false)
-    const aspect = w / h, vs = 1.8
+    const aspect = w / h, vs = 1.2
     this.camera.left = -vs * aspect; this.camera.right = vs * aspect
     this.camera.top = vs; this.camera.bottom = -vs
     this.camera.updateProjectionMatrix()

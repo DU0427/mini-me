@@ -5,7 +5,8 @@ import * as THREE from 'three'
 // 使用 Canvas 2D API 绘制插画风格角色，再用 Sprite 渲染到 3D 场景
 // ============================================================
 
-export type MiniMeState = 'idle' | 'typing' | 'thinking' | 'drink' | 'stretch' | 'sleepy' | 'focus' | 'privacy'
+export type MiniMeState = 'idle' | 'typing' | 'thinking' | 'drink' | 'stretch' | 'sleepy' | 'focus' | 'privacy' | 'reminding'
+export type ReminderKind = 'drink_water' | 'stand_up' | 'late_night' | 'eye_rest'
 
 export class MiniMeAvatar {
   public group: THREE.Group
@@ -18,6 +19,7 @@ export class MiniMeAvatar {
   private isBlinking: boolean = false
   private eyeOpen: number = 1
   private time: number = 0
+  private reminderKind: ReminderKind = 'drink_water'
 
   private readonly C = {
     skin: '#FFE8D6', skinShade: '#F0C8A0', skinDark: '#E0B088',
@@ -43,7 +45,10 @@ export class MiniMeAvatar {
     this.drawIdle()
   }
 
-  setState(state: MiniMeState) { this.currentState = state }
+  setState(state: MiniMeState, reminderKind?: ReminderKind) {
+    this.currentState = state
+    if (reminderKind) this.reminderKind = reminderKind
+  }
   getState(): MiniMeState { return this.currentState }
 
   update(dt: number, time: number) {
@@ -65,6 +70,7 @@ export class MiniMeAvatar {
       case 'sleepy': this.drawSleepy(); break
       case 'focus': this.drawFocus(); break
       case 'privacy': this.drawPrivacy(); break
+      case 'reminding': this.drawReminding(); break
     }
     this.sprite.material.map!.needsUpdate = true
     this.group.position.y = 0.28 + Math.sin(time * 2.2) * 0.006
@@ -224,7 +230,7 @@ export class MiniMeAvatar {
     c.fillStyle = this.C.skin; c.fill()
 
     // ---- 右臂 ----
-    const rx = 342
+    const rx = 372
     this.rr(rx - 30, by + ry, 30, 90, 15)
     const g2 = c.createLinearGradient(rx-30, by+ry, rx, by+ry)
     g2.addColorStop(0, this.C.skin); g2.addColorStop(0.6, this.C.skin); g2.addColorStop(1, this.C.skinDark)
@@ -271,8 +277,36 @@ export class MiniMeAvatar {
 
   private drawQuestionMark() {
     const c = this.ctx; c.save()
-    c.font = 'bold 56px sans-serif'; c.textAlign = 'center'; c.fillStyle = '#FFAA44'
-    c.fillText('?', 390, 130); c.restore()
+    // 跳动的小灯泡 — 表示"我有个想法" 💡
+    const bounce = Math.sin(this.time * 3) * 5
+    const cx = 380, cy = 85 + bounce
+    // 灯泡光晕
+    const glow = c.createRadialGradient(cx, cy - 5, 2, cx, cy, 24)
+    glow.addColorStop(0, 'rgba(255,230,100,0.9)')
+    glow.addColorStop(0.5, 'rgba(255,200,50,0.4)')
+    glow.addColorStop(1, 'rgba(255,200,50,0)')
+    c.beginPath(); c.arc(cx, cy, 24, 0, Math.PI * 2)
+    c.fillStyle = glow; c.fill()
+    // 灯泡主体
+    c.beginPath(); c.arc(cx, cy - 3, 12, Math.PI, 0)
+    c.quadraticCurveTo(cx + 12, cy + 2, cx, cy + 8)
+    c.quadraticCurveTo(cx - 12, cy + 2, cx - 12, cy - 3)
+    c.closePath()
+    const bulbG = c.createRadialGradient(cx - 3, cy - 6, 2, cx, cy - 3, 12)
+    bulbG.addColorStop(0, '#FFF8E0')
+    bulbG.addColorStop(0.5, '#FFDD66')
+    bulbG.addColorStop(1, '#EEBB33')
+    c.fillStyle = bulbG; c.fill()
+    // 灯泡底部
+    c.fillRect(cx - 3, cy + 6, 6, 4)
+    // 灯泡内发光线条
+    c.beginPath(); c.moveTo(cx - 5, cy - 8); c.lineTo(cx - 2, cy - 5)
+    c.moveTo(cx + 5, cy - 8); c.lineTo(cx + 2, cy - 5)
+    c.moveTo(cx - 6, cy - 2); c.lineTo(cx - 3, cy - 1)
+    c.moveTo(cx + 6, cy - 2); c.lineTo(cx + 3, cy - 1)
+    c.strokeStyle = 'rgba(255,255,255,0.4)'; c.lineWidth = 1.5
+    c.stroke()
+    c.restore()
   }
 
   private drawPillow() {
@@ -370,11 +404,62 @@ export class MiniMeAvatar {
     this.drawHeadphones()
   }
 
-  private drawPrivacy() {
+  private drawReminding() {
     const c = this.ctx; c.clearRect(0,0,512,512)
-    this.drawShadow(); this.drawBody(); this.drawHead()
-    this.drawEyes(0); this.drawBlush(); this.drawMouth(0.15)
-    // 手遮眼 — 画在脸上方
-    this.drawArms(-8, -8)
+    this.drawShadow(); this.drawBody()
+
+    switch (this.reminderKind) {
+      case 'drink_water':
+        // 双手捧杯 + 担心表情
+        this.drawArms(-40, -40)
+        this.drawHead(-0.03); this.drawBlush()
+        this.drawEyes(this.eyeOpen); this.drawMouth(0.2)
+        this.drawCup()
+        c.save()
+        // 冒出小水滴提示
+        c.font = '28px sans-serif'; c.textAlign = 'center'
+        c.fillStyle = '#60B0FF'
+        c.fillText('💧', 390, 140)
+        c.restore()
+        break
+
+      case 'stand_up':
+        // 伸懒腰 + 指腿
+        this.drawArms(-30, 30)
+        this.drawHead(0.08); this.drawBlush()
+        this.drawEyes(this.eyeOpen, false, true); this.drawMouth(0.1)
+        c.save()
+        c.font = '32px sans-serif'; c.textAlign = 'center'
+        c.fillStyle = '#FFAA44'
+        c.fillText('🦵', 390, 150)
+        c.restore()
+        break
+
+      case 'late_night':
+        // 打哈欠 + 指时钟
+        this.drawArms(20, -20)
+        this.drawHead(0.12); this.drawBlush()
+        this.drawEyes(0.15); this.drawMouth(0)
+        c.save(); c.beginPath(); c.ellipse(256, 230, 12, 16, 0, 0, Math.PI*2)
+        c.fillStyle = '#2D2D4A'; c.fill(); c.restore()
+        c.save()
+        c.font = '32px sans-serif'; c.textAlign = 'center'
+        c.fillStyle = '#818CF8'
+        c.fillText('🌙', 390, 130)
+        c.restore()
+        break
+
+      case 'eye_rest':
+        // 揉眼睛姿势
+        this.drawArms(-10, -10)
+        this.drawHead(0.05); this.drawBlush()
+        this.drawEyes(0.3); this.drawMouth(0.15)
+        c.save()
+        c.font = '28px sans-serif'; c.textAlign = 'center'
+        c.fillStyle = '#34D399'
+        c.fillText('👀', 390, 140)
+        c.restore()
+        break
+    }
   }
 }

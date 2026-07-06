@@ -24,168 +24,7 @@
     #three-canvas { width: 100%; height: 100%; display: block; pointer-events: auto; }
 
     /* ============================================================
-       SINGLE UNIFIED FLOATING UI PANEL — premium glassmorphism
-       ============================================================ */
-    #hud-container {
-      position: absolute;
-      bottom: 16px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 10;
-      pointer-events: none;
-      animation: panel-float-in 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-
-    @keyframes panel-float-in {
-      from { opacity: 0; transform: translateX(-50%) translateY(16px) scale(0.97); }
-      to   { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
-    }
-
-    /* 主面板 — 高级毛玻璃 + 渐变边缘光 */
-    .unified-panel {
-      background: rgba(18, 20, 30, 0.65);
-      backdrop-filter: blur(24px) saturate(1.4);
-      -webkit-backdrop-filter: blur(24px) saturate(1.4);
-      border: 1px solid rgba(255, 255, 255, 0.06);
-      border-radius: 20px;
-      padding: 16px 20px;
-      min-width: 200px;
-      box-shadow:
-        0 8px 40px rgba(0, 0, 0, 0.35),
-        inset 0 1px 0 rgba(255, 255, 255, 0.05),
-        0 0 0 1px rgba(255, 255, 255, 0.03);
-      pointer-events: auto;
-    }
-
-    /* 渐变边缘光 overlay */
-    .unified-panel::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      border-radius: 20px;
-      padding: 1px;
-      background: linear-gradient(
-        135deg,
-        rgba(110, 168, 255, 0.12) 0%,
-        transparent 40%,
-        transparent 60%,
-        rgba(110, 168, 255, 0.06) 100%
-      );
-      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-      -webkit-mask-composite: xor;
-      mask-composite: exclude;
-      pointer-events: none;
-    }
-
-    /* ---- Layer 1: 状态胶囊 + 标题 ---- */
-    .panel-header {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 12px;
-    }
-
-    .status-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 3px 12px 3px 10px;
-      border-radius: 100px;
-      background: rgba(110, 168, 255, 0.12);
-      border: 1px solid rgba(110, 168, 255, 0.15);
-      font-size: 10px;
-      font-weight: 600;
-      letter-spacing: 0.4px;
-      text-transform: uppercase;
-      color: rgba(255, 255, 255, 0.8);
-    }
-    .status-pill .dot {
-      width: 5px; height: 5px;
-      border-radius: 50%;
-      background: #6EA8FF;
-      animation: pill-glow 2s ease-in-out infinite;
-    }
-    @keyframes pill-glow {
-      0%, 100% { box-shadow: 0 0 3px rgba(110, 168, 255, 0.4); }
-      50% { box-shadow: 0 0 8px rgba(110, 168, 255, 0.8); }
-    }
-
-    .panel-header .panel-title {
-      font-size: 9px;
-      font-weight: 500;
-      letter-spacing: 0.5px;
-      text-transform: uppercase;
-      color: rgba(255, 255, 255, 0.3);
-      margin-left: auto;
-    }
-
-    /* ---- Layer 2: 2×2 指标网格 ---- */
-    .metrics-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px 14px;
-      margin-bottom: 12px;
-    }
-
-    .metric-block {
-      display: flex;
-      flex-direction: column;
-      gap: 1px;
-    }
-
-    .metric-value {
-      font-size: 20px;
-      font-weight: 700;
-      color: rgba(255, 255, 255, 0.92);
-      letter-spacing: -0.5px;
-      line-height: 1.15;
-      font-variant-numeric: tabular-nums;
-    }
-
-    .metric-label {
-      font-size: 8px;
-      font-weight: 500;
-      color: rgba(255, 255, 255, 0.3);
-      letter-spacing: 0.5px;
-      text-transform: uppercase;
-    }
-
-    /* ---- Layer 3: 底部辅助状态 ---- */
-    .panel-footer {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding-top: 10px;
-      border-top: 1px solid rgba(255, 255, 255, 0.04);
-    }
-
-    .hint-text {
-      font-size: 9px;
-      font-weight: 400;
-      color: rgba(255, 255, 255, 0.25);
-      letter-spacing: 0.2px;
-    }
-
-    .source-badge {
-      font-size: 8px;
-      font-weight: 500;
-      color: rgba(255, 255, 255, 0.25);
-      letter-spacing: 0.3px;
-    }
-
-    /* ---- 状态色变体 ---- */
-    .status-pill.active   { background: rgba(110, 168, 255, 0.15); border-color: rgba(110, 168, 255, 0.25); }
-    .status-pill.success  { background: rgba(74, 222, 128, 0.12); border-color: rgba(74, 222, 128, 0.2); }
-    .status-pill.warning  { background: rgba(251, 191, 36, 0.12); border-color: rgba(251, 191, 36, 0.2); }
-    .status-pill.alert    { background: rgba(248, 113, 113, 0.12); border-color: rgba(248, 113, 113, 0.2); }
-
-    .status-pill.active  .dot { background: #6EA8FF; }
-    .status-pill.success .dot { background: #4ADE80; }
-    .status-pill.warning .dot { background: #FBBF24; }
-    .status-pill.alert   .dot { background: #F87171; }
-
-    /* ============================================================
-       提醒气泡 — 与统一面板风格一致
+       提醒气泡
        ============================================================ */
     #ui-overlay {
       position: absolute;
@@ -196,88 +35,95 @@
     #ui-overlay.visible { opacity: 1; }
 
     .reminder-bubble {
-      background: rgba(18, 20, 30, 0.75);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(18, 20, 30, 0.8);
       backdrop-filter: blur(24px) saturate(1.4);
       -webkit-backdrop-filter: blur(24px) saturate(1.4);
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.06);
       border-radius: 16px;
-      padding: 12px 20px;
-      font-size: 12px;
-      font-weight: 500;
-      color: rgba(255, 255, 255, 0.9);
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      padding: 10px 14px 10px 10px;
+      min-width: 200px;
+      max-width: 280px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
       pointer-events: auto;
       cursor: pointer;
-      white-space: nowrap;
-      animation: bubble-in 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-    .reminder-bubble::before { content: '🔔 '; font-size: 11px; }
-
-    @keyframes bubble-in {
-      from { opacity: 0; transform: translateY(8px) scale(0.95); }
-      to   { opacity: 1; transform: translateY(0) scale(1); }
+      animation: bubble-in 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
-    /* ============================================================
-       状态消息气泡 — 角色头顶文字
-       ============================================================ */
-    #state-bubble-container {
-      position: absolute;
-      top: 50%; left: 50%;
-      transform: translate(-50%, -50%);
-      pointer-events: none;
-      z-index: 15;
+    .reminder-bubble .bubble-icon {
+      width: 32px; height: 32px;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
     }
 
-    .state-bubble {
-      background: rgba(255, 255, 255, 0.92);
-      border-radius: 12px;
-      padding: 6px 14px;
+    .reminder-bubble .bubble-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .reminder-bubble .bubble-message {
       font-size: 11px;
       font-weight: 500;
-      color: rgba(30, 35, 50, 0.85);
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.10);
-      white-space: nowrap;
-      position: relative;
-      animation: bubble-pop 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-      transform-origin: bottom center;
+      color: rgba(255, 255, 255, 0.92);
+      line-height: 1.35;
+      word-break: break-word;
     }
 
-    .state-bubble::after {
-      content: '';
-      position: absolute;
-      bottom: -5px; left: 50%;
-      transform: translateX(-50%);
-      width: 8px; height: 8px;
-      background: rgba(255, 255, 255, 0.92);
-      clip-path: polygon(0 0, 100% 0, 50% 100%);
+    .reminder-bubble .bubble-hint {
+      font-size: 8px;
+      font-weight: 400;
+      color: rgba(255, 255, 255, 0.3);
+      margin-top: 3px;
+      letter-spacing: 0.3px;
     }
 
-    @keyframes bubble-pop {
-      from { opacity: 0; transform: scale(0.7) translateY(10px); }
-      to   { opacity: 1; transform: scale(1) translateY(0); }
+    .reminder-bubble .bubble-action {
+      width: 24px; height: 24px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700;
+      color: white;
+      flex-shrink: 0;
+      opacity: 0.8;
+      transition: opacity 0.2s, transform 0.2s;
+    }
+    .reminder-bubble:hover .bubble-action {
+      opacity: 1;
+      transform: scale(1.1);
     }
 
-    .state-bubble.fade-out {
-      animation: bubble-fade 0.3s ease forwards;
+    /* 类型色变体 */
+    .reminder-bubble.type-drink_water { border-color: rgba(96, 176, 255, 0.2); }
+    .reminder-bubble.type-stand_up { border-color: rgba(255, 170, 68, 0.2); }
+    .reminder-bubble.type-late_night { border-color: rgba(129, 140, 248, 0.2); }
+    .reminder-bubble.type-eye_rest { border-color: rgba(52, 211, 153, 0.2); }
+
+    .reminder-bubble.level-warning { border-color: rgba(251, 191, 36, 0.3); }
+    .reminder-bubble.level-urgent {
+      border-color: rgba(248, 113, 113, 0.3);
+      animation: bubble-in 0.4s cubic-bezier(0.16, 1, 0.3, 1), pulse-border 2s ease-in-out infinite;
     }
 
-    @keyframes bubble-fade {
-      to { opacity: 0; transform: scale(0.8) translateY(-8px); }
+    @keyframes pulse-border {
+      0%, 100% { box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35); }
+      50% { box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35), 0 0 20px rgba(248, 113, 113, 0.15); }
+    }
+
+    @keyframes bubble-in {
+      from { opacity: 0; transform: translateY(12px) scale(0.92); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
     }
   </style>
 </head>
 <body>
   <div id="app">
     <canvas id="three-canvas"></canvas>
-    <div id="hud-container">
-      <!-- Single unified panel rendered here -->
-    </div>
     <div id="ui-overlay">
       <!-- Reminder bubbles here -->
-    </div>
-    <div id="state-bubble-container">
-      <!-- 状态消息气泡 (dynamic) -->
     </div>
   </div>
   <script type="module" src="./main.ts"></script>

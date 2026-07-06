@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { MiniMeAvatar, MiniMeState } from './MiniMeAvatar'
+import { MiniMeAvatar, MiniMeState, ReminderKind } from './MiniMeAvatar'
 
 // ============================================================
 // Character3D — 适配器：接入 MiniMeAvatar Q版小人
@@ -47,7 +47,10 @@ export class Character3D {
   setIdle() { this.isTyping=false; this.isThinking=false; this.isSleeping=false; this.avatar.setState('idle') }
   setTyping() { this.isTyping=true; this.isThinking=false; this.isSleeping=false; this.avatar.setState('typing') }
   setThinking() { this.isTyping=false; this.isThinking=true; this.isSleeping=false; this.avatar.setState('thinking') }
-  setReminding() { this.isTyping=false; this.isThinking=false; this.isSleeping=false; this.avatar.setState('idle') }
+  setReminding(kind?: ReminderKind) {
+    this.isTyping=false; this.isThinking=false; this.isSleeping=false
+    this.avatar.setState('reminding', kind)
+  }
   setSleeping() { this.isTyping=false; this.isThinking=false; this.isSleeping=true; this.avatar.setState('sleepy') }
   setWalking() { this.isTyping=false; this.isThinking=false; this.isSleeping=false; this.avatar.setState('idle') }
   setPropsVisible(_v: boolean) {}

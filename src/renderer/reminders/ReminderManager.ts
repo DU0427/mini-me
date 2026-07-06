@@ -1,9 +1,9 @@
-import { ReminderType, ReminderEvent, SensorData } from '../../shared/types'
-import { MinimeState } from '../../shared/types'
+import { ReminderType, ReminderEvent, SensorData, MinimeState } from '../../shared/types'
 import { StateMachine } from '../states/StateMachine'
+import { ReminderKind } from '../character/MiniMeAvatar'
 
 // ============================================================
-// 提醒管理器 - 喝水、久坐、熬夜提醒
+// 提醒管理器 - 情绪化喝水、久坐、熬夜提醒
 // ============================================================
 
 export type ReminderCallback = (event: ReminderEvent) => void
@@ -100,8 +100,8 @@ export class ReminderManager {
       level: 'info',
     }
 
-    // 强制角色进入提醒状态
-    this.stateMachine.forceReminding()
+    // 强制角色进入提醒状态（传递提醒类型用于情绪化表现）
+    this.stateMachine.forceReminding(type as unknown as ReminderKind)
     this.onReminder?.(event)
   }
 
@@ -146,7 +146,7 @@ export class ReminderManager {
       level: this.reminderLevel >= 2 ? 'urgent' : 'warning',
     }
 
-    this.stateMachine.forceReminding()
+    this.stateMachine.forceReminding(this.activeReminder as unknown as ReminderKind)
     this.onReminder?.(event)
   }
 

@@ -51,9 +51,6 @@ export class MinimeApp {
       return
     }
 
-    // 创建 HUD 卡片系统
-    this.createHUD()
-
     // 设置 canvas 尺寸
     this.canvas.width = window.innerWidth
     this.canvas.height = window.innerHeight
@@ -77,8 +74,6 @@ export class MinimeApp {
     // 监听状态变化
     this.stateMachine.onStateChange((newState, oldState) => {
       console.log(`[minime] 状态: ${oldState} → ${newState}`)
-      this.updateStateBadge(newState)
-      this.showStateBubble(newState)
     })
 
     // 传感器数据方案:
@@ -139,13 +134,6 @@ export class MinimeApp {
     // 更新提醒管理器
     this.reminderManager.update(data)
 
-    // 更新 HUD 卡片 (每秒更新 4 次)
-    const now = Date.now()
-    if (now - this.lastDebugUpdate > 250) {
-      this.updateHUD(data)
-      this.lastDebugUpdate = now
-    }
-
     // 累积数据
     this.accumulateData(data)
   }
@@ -179,15 +167,37 @@ export class MinimeApp {
     this.hideReminderBubble()
 
     const bubble = document.createElement('div')
-    bubble.className = 'reminder-bubble'
-    bubble.textContent = event.message
+    bubble.className = `reminder-bubble type-${event.type} level-${event.level}`
     bubble.id = 'reminder-bubble'
 
+    // 根据提醒类型设置不同的图标和颜色
+    const typeMeta: Record<string, { icon: string; accent: string }> = {
+      drink_water: { icon: '💧', accent: '#60B0FF' },
+      stand_up: { icon: '🦵', accent: '#FFAA44' },
+      late_night: { icon: '🌙', accent: '#818CF8' },
+      eye_rest: { icon: '👀', accent: '#34D399' },
+    }
+    const meta = typeMeta[event.type] || { icon: '🔔', accent: '#6EA8FF' }
+
+    bubble.innerHTML = `
+      <div class="bubble-icon" style="background: ${meta.accent}22; color: ${meta.accent}">
+        ${meta.icon}
+      </div>
+      <div class="bubble-content">
+        <div class="bubble-message">${event.message}</div>
+        <div class="bubble-hint">点击 ✓ 完成 · 右键 ⏰ 稍后</div>
+      </div>
+      <div class="bubble-action" style="background: ${meta.accent}">✓</div>
+    `
+
     // 点击气泡 = 完成提醒
-    bubble.addEventListener('click', () => {
-      this.reminderManager.completeReminder()
-      if (ipcRenderer) {
-        ipcRenderer.send(IPC_CHANNELS.REMINDER_ACTION, 'completed')
+    bubble.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement
+      if (target.closest('.reminder-bubble')) {
+        this.reminderManager.completeReminder()
+        if (ipcRenderer) {
+          ipcRenderer.send(IPC_CHANNELS.REMINDER_ACTION, 'completed')
+        }
       }
     })
 
@@ -250,154 +260,6 @@ export class MinimeApp {
     document.addEventListener('mouseup', () => {
       this.isDragging = false
     })
-  }
-
-  // 状态消息气泡
-  private stateMessages: Record<string, string> = {
-    idle: '今天也一起活下来 ☕',
-    typing: '一起敲键盘！ ⌨️',
-    thinking: '让我想想… 🤔',
-    drink: '喝点水吧？ 💧',
-    stretch: '伸个懒腰～ 🌟',
-    sleepy: '我还能陪你…但你明天可能会后悔 😴',
-    focus: '专注模式 🎧',
-    privacy: '🙈 非礼勿视',
-  }
-
-  private showStateBubble(state: string) {
-    const container = document.getElementById('state-bubble-container')
-    if (!container) return
-
-    // 清除旧气泡
-    if (this.stateBubbleTimeout) {
-      clearTimeout(this.stateBubbleTimeout)
-    }
-    const old = container.querySelector('.state-bubble')
-    if (old) old.remove()
-
-    const msg = this.stateMessages[state]
-    if (!msg) return
-
-    const bubble = document.createElement('div')
-    bubble.className = 'state-bubble'
-    bubble.textContent = msg
-    container.appendChild(bubble)
-
-    // 3 秒后淡出
-    this.stateBubbleTimeout = setTimeout(() => {
-      bubble.classList.add('fade-out')
-      setTimeout(() => bubble.remove(), 300)
-    }, 3000)
-  }
-
-  // ============================================================
-  // HUD — SINGLE UNIFIED FLOATING PANEL
-  // ============================================================
-
-  private panelSpeed!: HTMLElement
-  private panelActivity!: HTMLElement
-  private panelLoad!: HTMLElement
-  private panelIdle!: HTMLElement
-  private pillText!: HTMLElement
-  private hintText!: HTMLElement
-  private sourceBadge!: HTMLElement
-  private statusPill!: HTMLElement
-
-  private createHUD() {
-    const container = document.getElementById('hud-container')!
-    if (!container) return
-
-    container.innerHTML = `
-      <div class="unified-panel">
-        <!-- Layer 1: 状态胶囊 -->
-        <div class="panel-header">
-          <div class="status-pill active" id="status-pill">
-            <span class="dot"></span>
-            <span id="pill-text">Active</span>
-          </div>
-          <span class="panel-title">minime</span>
-        </div>
-
-        <!-- Layer 2: 2×2 指标网格 -->
-        <div class="metrics-grid">
-          <div class="metric-block">
-            <div class="metric-value" id="panel-speed">0.0</div>
-            <div class="metric-label">Speed</div>
-          </div>
-          <div class="metric-block">
-            <div class="metric-value" id="panel-activity">0%</div>
-            <div class="metric-label">Activity</div>
-          </div>
-          <div class="metric-block">
-            <div class="metric-value" id="panel-load">0%</div>
-            <div class="metric-label">Load</div>
-          </div>
-          <div class="metric-block">
-            <div class="metric-value" id="panel-idle">0s</div>
-            <div class="metric-label">Idle</div>
-          </div>
-        </div>
-
-        <!-- Layer 3: 底部辅助状态 -->
-        <div class="panel-footer">
-          <span class="hint-text" id="hint-text">Syncing...</span>
-          <span class="source-badge" id="source-badge">⟳ simulation</span>
-        </div>
-      </div>
-    `
-
-    this.panelSpeed = document.getElementById('panel-speed')!
-    this.panelActivity = document.getElementById('panel-activity')!
-    this.panelLoad = document.getElementById('panel-load')!
-    this.panelIdle = document.getElementById('panel-idle')!
-    this.pillText = document.getElementById('pill-text')!
-    this.hintText = document.getElementById('hint-text')!
-    this.sourceBadge = document.getElementById('source-badge')!
-    this.statusPill = document.getElementById('status-pill')!
-  }
-
-  private updateHUD(data: SensorData) {
-    if (this.panelSpeed) {
-      this.panelSpeed.textContent = data.typingSpeed.toFixed(1)
-    }
-    if (this.panelActivity) {
-      const pct = Math.round((data.keyboardActivity + data.mouseActivity) * 50)
-      this.panelActivity.textContent = `${pct}%`
-    }
-    if (this.panelLoad) {
-      const load = Math.min(100, data.typingSpeed * 12)
-      this.panelLoad.textContent = `${Math.round(load)}%`
-    }
-    if (this.panelIdle) {
-      const sec = Math.floor(data.idleTime / 1000)
-      this.panelIdle.textContent = sec < 60 ? `${sec}s` : `${Math.floor(sec / 60)}m ${sec % 60}s`
-    }
-    if (this.sourceBadge) {
-      this.sourceBadge.textContent = this.dataReceived ? '● main' : '⟳ simulation'
-      this.sourceBadge.style.color = this.dataReceived
-        ? 'rgba(110, 168, 255, 0.5)'
-        : 'rgba(255, 200, 100, 0.4)'
-    }
-    if (this.hintText) {
-      this.hintText.textContent = this.dataReceived ? 'Processing...' : 'Syncing...'
-    }
-  }
-
-  private updateStateBadge(state: MinimeState) {
-    if (!this.pillText || !this.statusPill) return
-
-    const labels: Record<string, string> = {
-      idle: 'Idle', typing: 'Active', thinking: 'Thinking',
-      reminding: 'Alert', sleeping: 'Sleep', walking: 'Walking',
-    }
-
-    const pillClasses: Record<string, string> = {
-      idle: 'active', typing: 'active', thinking: 'active',
-      reminding: 'alert', sleeping: 'warning', walking: 'active',
-    }
-
-    this.pillText.textContent = labels[state] || 'Idle'
-    this.statusPill.className = `status-pill ${pillClasses[state] || 'active'}`
   }
 
   // ============================================================
