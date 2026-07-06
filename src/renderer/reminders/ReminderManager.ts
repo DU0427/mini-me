@@ -11,24 +11,24 @@ export type ReminderDismissCallback = () => void
 
 const REMINDER_MESSAGES = {
   [ReminderType.DrinkWater]: {
-    first: '💧 我喝了一口水，你呢？',
-    second: '🥤 你还没喝水！来看看我的水杯',
-    third: '🌵 再不喝水我要变成仙人掌了...',
+    first: '我刚刚替你又喝了一口水，味道不错',
+    second: '你的杯子已经孤独很久了，去陪陪它吧',
+    third: '再不去喝水我就要开始喝墨水了',
   },
   [ReminderType.StandUp]: {
-    first: '🪑 我的腿都坐麻了...你要不要站一下？',
-    second: '🏃 站起来！我们一起做拉伸！',
-    third: '💀 你再不站，我就从椅子上滑下去了',
+    first: '你屁股和椅子快要长在一起了',
+    second: '站起来走两步，你又不赶集',
+    third: '医学史上第一个和椅子合体的人即将诞生',
   },
   [ReminderType.LateNight]: {
-    first: '🌙 这么晚了，还在工作吗？',
-    second: '🛏️ 我睡衣都换好了...',
-    third: '😴 你确定还要继续？我担心你明天的状态',
+    first: '熬夜不会让你变强，只会让你变秃',
+    second: '这个点了还在工作？你老板又不会给你颁奖',
+    third: '肝可以不要，但头发还是要留几根的',
   },
   [ReminderType.EyeRest]: {
-    first: '👀 盯屏幕好久了，看远处20秒？',
-    second: '🔭 我拿望远镜帮你看看远处',
-    third: '😵 你的眼睛在抗议了...',
+    first: '你的眼睛在发出求救信号',
+    second: '看屏幕这么久，你眼睛不累我都累了',
+    third: '再盯着屏幕你的眼睛就要离家出走了',
   },
 }
 

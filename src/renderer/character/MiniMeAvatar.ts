@@ -30,11 +30,17 @@ export class MiniMeAvatar {
   }
 
   constructor() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2)
     this.canvas = document.createElement('canvas')
-    this.canvas.width = 512; this.canvas.height = 512
+    this.canvas.width = 512 * dpr
+    this.canvas.height = 512 * dpr
     this.ctx = this.canvas.getContext('2d')!
+    this.ctx.scale(dpr, dpr)
 
     const tex = new THREE.CanvasTexture(this.canvas)
+    tex.minFilter = THREE.LinearMipmapLinearFilter
+    tex.magFilter = THREE.LinearFilter
+    tex.generateMipmaps = true
     const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, depthTest: false })
     this.sprite = new THREE.Sprite(mat)
     this.sprite.scale.set(1.3, 1.3, 1)
