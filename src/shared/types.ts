@@ -49,6 +49,13 @@ export interface ReminderEvent {
   level: 'info' | 'warning' | 'urgent'
 }
 
+/** 设置 */
+export interface MinimeSettings {
+  drinkInterval: number     // 喝水提醒间隔（分钟）
+  standInterval: number     // 久坐提醒间隔（分钟）
+  eyeRestInterval: number   // 远眺提醒间隔（分钟）
+}
+
 /** IPC 通道名称 */
 export const IPC_CHANNELS = {
   SENSOR_DATA: 'sensor:data',
@@ -58,6 +65,10 @@ export const IPC_CHANNELS = {
   WINDOW_CONTROL: 'window:control',
   SCREEN_FRAME: 'screen:frame',
   ICON_DATA: 'icon:data',
+  SETTINGS_GET: 'settings:get',
+  SETTINGS_SAVE: 'settings:save',
+  SETTINGS_OPEN: 'settings:open',
+  SETTINGS_UPDATED: 'settings:updated',
 } as const
 
 /** 每日统计数据 */

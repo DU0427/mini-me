@@ -2,7 +2,7 @@ import { SceneSetup } from './scene/SceneSetup'
 import { Character3D } from './character/Character3D'
 import { StateMachine } from './states/StateMachine'
 import { ReminderManager } from './reminders/ReminderManager'
-import { SensorData, MinimeState, IPC_CHANNELS, ReminderEvent } from '../shared/types'
+import { SensorData, MinimeState, IPC_CHANNELS, ReminderEvent, MinimeSettings } from '../shared/types'
 import { generateAndSendIcon } from './character/IconGenerator'
 
 // ============================================================
@@ -70,6 +70,17 @@ export class MinimeApp {
       (event) => this.onReminderTriggered(event),
       () => this.onReminderDismissed()
     )
+
+    // 加载设置
+    this.loadSettings()
+
+    // 监听设置更新
+    if (ipcRenderer) {
+      ipcRenderer.on('settings:updated', (_event: any, settings: MinimeSettings) => {
+        console.log('[minime] 设置已更新:', settings)
+        this.reminderManager.updateSettings(settings)
+      })
+    }
 
     // 监听状态变化
     this.stateMachine.onStateChange((newState, oldState) => {
@@ -180,24 +191,15 @@ export class MinimeApp {
     const meta = typeMeta[event.type] || { icon: '🔔', accent: '#6EA8FF' }
 
     bubble.innerHTML = `
-      <div class="bubble-icon" style="background: ${meta.accent}22; color: ${meta.accent}">
-        ${meta.icon}
-      </div>
-      <div class="bubble-content">
-        <div class="bubble-message">${event.message}</div>
-        <div class="bubble-hint">点击 ✓ 完成 · 右键 ⏰ 稍后</div>
-      </div>
-      <div class="bubble-action" style="background: ${meta.accent}">✓</div>
+      <span class="bubble-icon">${meta.icon}</span>
+      <span class="bubble-msg">${event.message}</span>
     `
 
-    // 点击气泡 = 完成提醒
-    bubble.addEventListener('click', (e) => {
-      const target = e.target as HTMLElement
-      if (target.closest('.reminder-bubble')) {
-        this.reminderManager.completeReminder()
-        if (ipcRenderer) {
-          ipcRenderer.send(IPC_CHANNELS.REMINDER_ACTION, 'completed')
-        }
+    // 点击 = 完成
+    bubble.addEventListener('click', () => {
+      this.reminderManager.completeReminder()
+      if (ipcRenderer) {
+        ipcRenderer.send(IPC_CHANNELS.REMINDER_ACTION, 'completed')
       }
     })
 
@@ -311,6 +313,22 @@ export class MinimeApp {
 
       this.onSensorData(data)
     }, 500)
+  }
+
+  // ============================================================
+  // 设置
+  // ============================================================
+
+  private async loadSettings() {
+    if (!ipcRenderer) return
+    try {
+      const settings: MinimeSettings = await ipcRenderer.invoke('settings:get')
+      if (settings) {
+        this.reminderManager.updateSettings(settings)
+      }
+    } catch (e) {
+      console.error('[minime] 加载设置失败:', e)
+    }
   }
 
   // ============================================================

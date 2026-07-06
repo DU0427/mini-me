@@ -1,4 +1,4 @@
-import { ReminderType, ReminderEvent, SensorData, MinimeState } from '../../shared/types'
+import { ReminderType, ReminderEvent, SensorData, MinimeState, MinimeSettings } from '../../shared/types'
 import { StateMachine } from '../states/StateMachine'
 import { ReminderKind } from '../character/MiniMeAvatar'
 
@@ -39,16 +39,26 @@ export class ReminderManager {
   private activeReminder: ReminderType | null = null
   private reminderLevel: number = 0
 
-  // 提醒计时器 (ms)
+  // 提醒间隔 (ms) - 默认值将由设置覆盖
+  private drinkInterval = 45 * 60 * 1000
+  private standInterval = 60 * 60 * 1000
+  private eyeRestInterval = 30 * 60 * 1000
+
+  // 上次提醒时间戳
   private lastDrinkTime: number = Date.now()
   private lastStandTime: number = Date.now()
   private lastEyeRestTime: number = Date.now()
-  private drinkInterval = 45 * 60 * 1000    // 45分钟
-  private standInterval = 60 * 60 * 1000     // 60分钟
-  private eyeRestInterval = 30 * 60 * 1000   // 30分钟
 
   constructor(stateMachine: StateMachine) {
     this.stateMachine = stateMachine
+  }
+
+  /** 从设置更新间隔 */
+  updateSettings(settings: MinimeSettings) {
+    this.drinkInterval = settings.drinkInterval * 60 * 1000
+    this.standInterval = settings.standInterval * 60 * 1000
+    this.eyeRestInterval = settings.eyeRestInterval * 60 * 1000
+    console.log(`[ReminderManager] 间隔已更新: 喝水=${settings.drinkInterval}min, 久坐=${settings.standInterval}min, 远眺=${settings.eyeRestInterval}min`)
   }
 
   setCallbacks(onReminder: ReminderCallback, onDismiss: ReminderDismissCallback) {
@@ -61,13 +71,6 @@ export class ReminderManager {
     if (this.activeReminder) return // 已有提醒进行中
 
     const now = Date.now()
-    const hour = new Date().getHours()
-
-    // 深夜提醒 (23:00 - 06:00)
-    if ((hour >= 23 || hour < 6) && this.activeReminder !== ReminderType.LateNight) {
-      this.triggerReminder(ReminderType.LateNight)
-      return
-    }
 
     // 喝水提醒
     if (now - this.lastDrinkTime > this.drinkInterval) {

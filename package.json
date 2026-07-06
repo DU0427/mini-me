@@ -5,7 +5,7 @@
   "scripts": {
     "build:renderer": "vite build",
     "build:main": "vite build --config vite.main.config.ts",
-    "build": "npm run build:renderer && npm run build:main",
+    "build": "npm run build:renderer && npm run build:main && powershell -Command \"Copy-Item 'src/renderer/settings.html' 'dist/settings.html' -Force\"",
     "start": "npx electron .",
     "dev": "concurrently -k \"vite build --config vite.main.config.ts --watch\" \"vite build --watch\" \"wait-on dist/index.html dist-electron/main/main.js && nodemon --watch dist-electron --watch dist -e js,html --delay 1 --exec \\\"npx electron .\\\"\""
   },

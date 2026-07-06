@@ -1,6 +1,7 @@
 import { app, BrowserWindow, ipcMain, Tray, Menu, screen, nativeImage } from 'electron'
 import path from 'path'
-import { IPC_CHANNELS } from '../shared/types'
+import fs from 'fs'
+import { IPC_CHANNELS, MinimeSettings } from '../shared/types'
 import { SensorHub } from './sensors/SensorHub'
 import { ScreenCapture } from './sensors/ScreenCapture'
 import { DailyStats } from './stats/DailyStats'
@@ -10,6 +11,7 @@ import { DailyStats } from './stats/DailyStats'
 // ============================================================
 
 let mainWindow: BrowserWindow | null = null
+let settingsWindow: BrowserWindow | null = null
 let tray: Tray | null = null
 let sensorHub: SensorHub | null = null
 let screenCapture: ScreenCapture | null = null
@@ -18,6 +20,86 @@ let isQuitting = false
 
 const WINDOW_WIDTH = 135
 const WINDOW_HEIGHT = 185
+
+// ============================================================
+// 设置存储
+// ============================================================
+
+const SETTINGS_PATH = path.join(app.getPath('userData'), 'settings.json')
+
+const DEFAULT_SETTINGS: MinimeSettings = {
+  drinkInterval: 45,
+  standInterval: 60,
+  eyeRestInterval: 30,
+}
+
+function loadSettings(): MinimeSettings {
+  try {
+    if (fs.existsSync(SETTINGS_PATH)) {
+      const raw = fs.readFileSync(SETTINGS_PATH, 'utf-8')
+      return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) }
+    }
+  } catch (e) {
+    console.error('[settings] 读取失败:', e)
+  }
+  return { ...DEFAULT_SETTINGS }
+}
+
+function saveSettings(settings: MinimeSettings) {
+  try {
+    fs.writeFileSync(SETTINGS_PATH, JSON.stringify(settings, null, 2), 'utf-8')
+    console.log('[settings] 已保存:', settings)
+  } catch (e) {
+    console.error('[settings] 保存失败:', e)
+  }
+}
+
+// ============================================================
+// 图标生成 — 紫色渐变圆角方块 + 笑脸
+// ============================================================
+
+function generateAppIcon(): nativeImage {
+  const size = 64
+  const buf = Buffer.alloc(size * size * 4, 0)
+  const C = size / 2
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const i = (y * size + x) * 4
+      const dx = x - C, dy = y - C
+      const dist = Math.sqrt(dx * dx + dy * dy)
+      // 圆角矩形 (半径 12)
+      const rx = Math.abs(dx) - (C - 12)
+      const ry = Math.abs(dy) - (C - 12)
+      const cornerDist = Math.sqrt(Math.max(rx, 0) ** 2 + Math.max(ry, 0) ** 2)
+      const inside = cornerDist <= 12 && Math.abs(dx) <= C - 12 + 12 && Math.abs(dy) <= C - 12 + 12
+      if (inside) {
+        const f = dist / C
+        buf[i] = Math.round(180 - f * 60)       // R
+        buf[i + 1] = Math.round(130 - f * 55)   // G
+        buf[i + 2] = Math.round(255 - f * 50)   // B
+        buf[i + 3] = 255                        // A
+      }
+    }
+  }
+  // 简单画两个小白点当眼睛
+  const eyeY = Math.round(C - 4)
+  const eyeOff = 10
+  for (const ex of [C - eyeOff, C + eyeOff]) {
+    for (let dy = -3; dy <= 3; dy++) {
+      for (let dx = -3; dx <= 3; dx++) {
+        if (dx * dx + dy * dy <= 9) {
+          const px = ex + dx
+          const py = eyeY + dy
+          if (px >= 0 && px < size && py >= 0 && py < size) {
+            const i = (py * size + px) * 4
+            buf[i] = 255; buf[i + 1] = 255; buf[i + 2] = 255; buf[i + 3] = 255
+          }
+        }
+      }
+    }
+  }
+  return nativeImage.createFromBitmap(buf, { width: size, height: size })
+}
 
 function createWindow() {
   const { width: screenWidth, height: screenHeight } = screen.getPrimaryDisplay().workArea
@@ -36,7 +118,7 @@ function createWindow() {
     skipTaskbar: true,
     resizable: false,
     hasShadow: false,
-    icon: iconPath,
+    icon: generateAppIcon(),
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
@@ -80,6 +162,10 @@ function createWindow() {
     if (!isQuitting) {
       event.preventDefault()
       mainWindow!.hide()
+      // 隐藏时关闭 DevTools，避免 DevTools 窗口散落在桌面上
+      if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents.isDevToolsOpened()) {
+        mainWindow.webContents.closeDevTools()
+      }
     }
   })
 
@@ -93,31 +179,7 @@ function createWindow() {
 }
 
 function createTray() {
-  // 使用 assets/icon.png 作为托盘图标（由渲染进程生成）
-  const iconPath = path.join(__dirname, '../../assets/icon.png')
-  let trayIcon: nativeImage
-  try {
-    trayIcon = nativeImage.createFromPath(iconPath)
-    if (trayIcon.isEmpty()) throw new Error('empty')
-  } catch {
-    // 后备：生成一个简单的紫色圆点
-    const size = 32
-    const buf = Buffer.alloc(size * size * 4, 0)
-    for (let y = 0; y < size; y++) {
-      for (let x = 0; x < size; x++) {
-        const i = (y * size + x) * 4
-        const dx = x - 16, dy = y - 16
-        if (dx * dx + dy * dy <= 169) {
-          const dist = Math.sqrt(dx * dx + dy * dy) / 13
-          buf[i] = Math.round(220 - dist * 70)
-          buf[i + 1] = Math.round(160 - dist * 65)
-          buf[i + 2] = Math.round(255 - dist * 55)
-          buf[i + 3] = 255
-        }
-      }
-    }
-    trayIcon = nativeImage.createFromBitmap(buf, { width: size, height: size })
-  }
+  const trayIcon = generateAppIcon()
   tray = new Tray(trayIcon)
   tray.setToolTip('minime - 你的桌面分身')
 
@@ -128,11 +190,22 @@ function createTray() {
         if (mainWindow) {
           if (mainWindow.isVisible()) {
             mainWindow.hide()
+            // 隐藏时关闭 DevTools 避免散落桌面
+            if (mainWindow.webContents.isDevToolsOpened()) {
+              mainWindow.webContents.closeDevTools()
+            }
           } else {
             mainWindow.show()
             mainWindow.setAlwaysOnTop(true)
           }
         }
+      },
+    },
+    { type: 'separator' },
+    {
+      label: '设置',
+      click: () => {
+        openSettingsWindow()
       },
     },
     { type: 'separator' },
@@ -151,12 +224,49 @@ function createTray() {
     if (mainWindow) {
       if (mainWindow.isVisible()) {
         mainWindow.hide()
+        if (mainWindow.webContents.isDevToolsOpened()) {
+          mainWindow.webContents.closeDevTools()
+        }
       } else {
         mainWindow.show()
         mainWindow.focus()
         mainWindow.setAlwaysOnTop(true)
       }
     }
+  })
+}
+
+// ============================================================
+// 设置窗口
+// ============================================================
+
+function openSettingsWindow() {
+  if (settingsWindow && !settingsWindow.isDestroyed()) {
+    settingsWindow.focus()
+    return
+  }
+
+  settingsWindow = new BrowserWindow({
+    width: 620,
+    height: 500,
+    resizable: false,
+    minimizable: false,
+    maximizable: false,
+    title: 'minime - 设置',
+    icon: generateAppIcon(),
+    webPreferences: {
+      nodeIntegration: true,
+      contextIsolation: false,
+    },
+  })
+
+  // 加载设置页面
+  const settingsPath = path.join(__dirname, '../../dist/settings.html')
+  settingsWindow.loadFile(settingsPath)
+  settingsWindow.setMenuBarVisibility(false)
+
+  settingsWindow.on('closed', () => {
+    settingsWindow = null
   })
 }
 
@@ -201,6 +311,25 @@ function setupIPC() {
     } catch (e) {
       console.error('[main] 图标更新失败:', e)
     }
+  })
+
+  // ============================================================
+  // 设置 IPC
+  // ============================================================
+
+  // 获取设置
+  ipcMain.handle('settings:get', () => {
+    return loadSettings()
+  })
+
+  // 保存设置
+  ipcMain.handle('settings:save', (_event, settings: MinimeSettings) => {
+    saveSettings(settings)
+    // 通知主窗口设置已更新
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('settings:updated', settings)
+    }
+    return true
   })
 }
 
