@@ -14,12 +14,16 @@ let tray: Tray | null = null
 let sensorHub: SensorHub | null = null
 let screenCapture: ScreenCapture | null = null
 let stats: DailyStats | null = null
+let isQuitting = false
 
 const WINDOW_WIDTH = 200
 const WINDOW_HEIGHT = 280
 
 function createWindow() {
   const { width: screenWidth, height: screenHeight } = screen.getPrimaryDisplay().workArea
+
+  // 图标路径
+  const iconPath = path.join(__dirname, '../../assets/icon.png')
 
   mainWindow = new BrowserWindow({
     width: WINDOW_WIDTH,
@@ -32,6 +36,7 @@ function createWindow() {
     skipTaskbar: true,
     resizable: false,
     hasShadow: false,
+    icon: iconPath,
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
@@ -70,6 +75,14 @@ function createWindow() {
     }
   })
 
+  // 关闭窗口时隐藏到系统托盘，不退出
+  mainWindow.on('close', (event) => {
+    if (!isQuitting) {
+      event.preventDefault()
+      mainWindow!.hide()
+    }
+  })
+
   // 打开 DevTools 分离窗口（避免遮挡小人）
   mainWindow.webContents.openDevTools({ mode: 'detach' })
   // 将 DevTools 窗口移到屏幕另一侧
@@ -80,9 +93,32 @@ function createWindow() {
 }
 
 function createTray() {
-  // 创建一个 16x16 的图标（用 nativeImage 生成一个简单图标）
-  const icon = nativeImage.createEmpty()
-  tray = new Tray(icon)
+  // 使用 assets/icon.png 作为托盘图标（由渲染进程生成）
+  const iconPath = path.join(__dirname, '../../assets/icon.png')
+  let trayIcon: nativeImage
+  try {
+    trayIcon = nativeImage.createFromPath(iconPath)
+    if (trayIcon.isEmpty()) throw new Error('empty')
+  } catch {
+    // 后备：生成一个简单的紫色圆点
+    const size = 32
+    const buf = Buffer.alloc(size * size * 4, 0)
+    for (let y = 0; y < size; y++) {
+      for (let x = 0; x < size; x++) {
+        const i = (y * size + x) * 4
+        const dx = x - 16, dy = y - 16
+        if (dx * dx + dy * dy <= 169) {
+          const dist = Math.sqrt(dx * dx + dy * dy) / 13
+          buf[i] = Math.round(220 - dist * 70)
+          buf[i + 1] = Math.round(160 - dist * 65)
+          buf[i + 2] = Math.round(255 - dist * 55)
+          buf[i + 3] = 255
+        }
+      }
+    }
+    trayIcon = nativeImage.createFromBitmap(buf, { width: size, height: size })
+  }
+  tray = new Tray(trayIcon)
   tray.setToolTip('minime - 你的桌面分身')
 
   const contextMenu = Menu.buildFromTemplate([
@@ -109,14 +145,34 @@ function createTray() {
   ])
 
   tray.setContextMenu(contextMenu)
+
+  // 点击托盘图标切换显示/隐藏（像 QQ 一样）
+  tray.on('click', () => {
+    if (mainWindow) {
+      if (mainWindow.isVisible()) {
+        mainWindow.hide()
+      } else {
+        mainWindow.show()
+        mainWindow.focus()
+        mainWindow.setAlwaysOnTop(true)
+      }
+    }
+  })
 }
 
 // IPC Handlers
 function setupIPC() {
-  // 窗口控制 (保留接口以备将来需要)
-  ipcMain.on(IPC_CHANNELS.WINDOW_CONTROL, (_event, command: string) => {
-    // 已改用 CSS pointer-events 控制
-    console.log('[main] 窗口控制:', command)
+  // 窗口拖拽移动
+  ipcMain.on(IPC_CHANNELS.WINDOW_CONTROL, (_event, command: string, data?: { x: number; y: number }) => {
+    if (command === 'drag-move' && data && mainWindow && !mainWindow.isDestroyed()) {
+      const bounds = mainWindow.getBounds()
+      mainWindow.setBounds({
+        x: bounds.x + data.x,
+        y: bounds.y + data.y,
+        width: bounds.width,
+        height: bounds.height,
+      })
+    }
   })
 
   // 提醒响应
@@ -133,6 +189,18 @@ function setupIPC() {
   // 获取每日统计
   ipcMain.handle(IPC_CHANNELS.DAILY_STATS, () => {
     return stats?.getSummary() || null
+  })
+
+  // 从渲染进程接收图标数据
+  ipcMain.on(IPC_CHANNELS.ICON_DATA, (_event, dataUrl: string) => {
+    try {
+      const img = nativeImage.createFromDataURL(dataUrl)
+      if (!img.isEmpty() && tray && !tray.isDestroyed()) {
+        tray.setImage(img)
+      }
+    } catch (e) {
+      console.error('[main] 图标更新失败:', e)
+    }
   })
 }
 
@@ -183,11 +251,12 @@ app.whenReady().then(() => {
   })
 })
 
+app.on('before-quit', () => {
+  isQuitting = true
+})
+
 app.on('window-all-closed', () => {
-  if (sensorHub) sensorHub.stop()
-  if (process.platform !== 'darwin') {
-    app.quit()
-  }
+  // 不退出，窗口已隐藏到托盘
 })
 
 app.on('before-quit', () => {

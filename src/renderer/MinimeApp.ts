@@ -3,6 +3,7 @@ import { Character3D } from './character/Character3D'
 import { StateMachine } from './states/StateMachine'
 import { ReminderManager } from './reminders/ReminderManager'
 import { SensorData, MinimeState, IPC_CHANNELS, ReminderEvent } from '../shared/types'
+import { generateAndSendIcon } from './character/IconGenerator'
 
 // ============================================================
 // minime 主应用 - 协调场景、角色、状态机、提醒系统
@@ -32,10 +33,9 @@ export class MinimeApp {
   private animFrameId: number = 0
   private lastTime: number = 0
   private lastDebugUpdate: number = 0
-  private stateIndicator!: HTMLElement
-  private debugPanel!: HTMLElement
   private sensorTimeout: ReturnType<typeof setTimeout> | null = null
   private dataReceived: boolean = false
+  private stateBubbleTimeout: ReturnType<typeof setTimeout> | null = null
 
   // 每日数据累积
   private typingAccumulator: number = 0
@@ -45,15 +45,14 @@ export class MinimeApp {
   async init() {
     this.canvas = document.getElementById('three-canvas') as HTMLCanvasElement
     this.overlay = document.getElementById('ui-overlay') as HTMLElement
-    this.stateIndicator = document.getElementById('state-indicator') as HTMLElement
 
     if (!this.canvas) {
       console.error('Canvas element not found')
       return
     }
 
-    // 创建调试面板
-    this.createDebugPanel()
+    // 创建 HUD 卡片系统
+    this.createHUD()
 
     // 设置 canvas 尺寸
     this.canvas.width = window.innerWidth
@@ -78,7 +77,8 @@ export class MinimeApp {
     // 监听状态变化
     this.stateMachine.onStateChange((newState, oldState) => {
       console.log(`[minime] 状态: ${oldState} → ${newState}`)
-      this.updateStateIndicator(newState)
+      this.updateStateBadge(newState)
+      this.showStateBubble(newState)
     })
 
     // 传感器数据方案:
@@ -119,6 +119,12 @@ export class MinimeApp {
       })
     }
 
+    // 拖拽移动窗口
+    this.setupDrag()
+
+    // 生成高质量系统托盘图标
+    setTimeout(() => generateAndSendIcon(), 500)
+
     // 启动渲染循环
     this.lastTime = performance.now()
     this.loop(this.lastTime)
@@ -133,10 +139,10 @@ export class MinimeApp {
     // 更新提醒管理器
     this.reminderManager.update(data)
 
-    // 更新调试面板 (每秒更新4次, 避免性能开销)
+    // 更新 HUD 卡片 (每秒更新 4 次)
     const now = Date.now()
     if (now - this.lastDebugUpdate > 250) {
-      this.updateDebugPanel(data)
+      this.updateHUD(data)
       this.lastDebugUpdate = now
     }
 
@@ -213,52 +219,185 @@ export class MinimeApp {
     this.overlay.classList.remove('visible')
   }
 
-  private updateStateIndicator(state: MinimeState) {
+  // ============================================================
+  // 窗口拖拽
+  // ============================================================
+
+  private isDragging = false
+  private dragStartX = 0
+  private dragStartY = 0
+
+  private setupDrag() {
+    const el = document.getElementById('app')!
+
+    el.addEventListener('mousedown', (e: MouseEvent) => {
+      this.isDragging = true
+      this.dragStartX = e.screenX
+      this.dragStartY = e.screenY
+    })
+
+    document.addEventListener('mousemove', (e: MouseEvent) => {
+      if (!this.isDragging) return
+      const dx = e.screenX - this.dragStartX
+      const dy = e.screenY - this.dragStartY
+      this.dragStartX = e.screenX
+      this.dragStartY = e.screenY
+      if (ipcRenderer) {
+        ipcRenderer.send(IPC_CHANNELS.WINDOW_CONTROL, 'drag-move', { x: dx, y: dy })
+      }
+    })
+
+    document.addEventListener('mouseup', () => {
+      this.isDragging = false
+    })
+  }
+
+  // 状态消息气泡
+  private stateMessages: Record<string, string> = {
+    idle: '今天也一起活下来 ☕',
+    typing: '一起敲键盘！ ⌨️',
+    thinking: '让我想想… 🤔',
+    drink: '喝点水吧？ 💧',
+    stretch: '伸个懒腰～ 🌟',
+    sleepy: '我还能陪你…但你明天可能会后悔 😴',
+    focus: '专注模式 🎧',
+    privacy: '🙈 非礼勿视',
+  }
+
+  private showStateBubble(state: string) {
+    const container = document.getElementById('state-bubble-container')
+    if (!container) return
+
+    // 清除旧气泡
+    if (this.stateBubbleTimeout) {
+      clearTimeout(this.stateBubbleTimeout)
+    }
+    const old = container.querySelector('.state-bubble')
+    if (old) old.remove()
+
+    const msg = this.stateMessages[state]
+    if (!msg) return
+
+    const bubble = document.createElement('div')
+    bubble.className = 'state-bubble'
+    bubble.textContent = msg
+    container.appendChild(bubble)
+
+    // 3 秒后淡出
+    this.stateBubbleTimeout = setTimeout(() => {
+      bubble.classList.add('fade-out')
+      setTimeout(() => bubble.remove(), 300)
+    }, 3000)
+  }
+
+  // ============================================================
+  // HUD — SINGLE UNIFIED FLOATING PANEL
+  // ============================================================
+
+  private panelSpeed!: HTMLElement
+  private panelActivity!: HTMLElement
+  private panelLoad!: HTMLElement
+  private panelIdle!: HTMLElement
+  private pillText!: HTMLElement
+  private hintText!: HTMLElement
+  private sourceBadge!: HTMLElement
+  private statusPill!: HTMLElement
+
+  private createHUD() {
+    const container = document.getElementById('hud-container')!
+    if (!container) return
+
+    container.innerHTML = `
+      <div class="unified-panel">
+        <!-- Layer 1: 状态胶囊 -->
+        <div class="panel-header">
+          <div class="status-pill active" id="status-pill">
+            <span class="dot"></span>
+            <span id="pill-text">Active</span>
+          </div>
+          <span class="panel-title">minime</span>
+        </div>
+
+        <!-- Layer 2: 2×2 指标网格 -->
+        <div class="metrics-grid">
+          <div class="metric-block">
+            <div class="metric-value" id="panel-speed">0.0</div>
+            <div class="metric-label">Speed</div>
+          </div>
+          <div class="metric-block">
+            <div class="metric-value" id="panel-activity">0%</div>
+            <div class="metric-label">Activity</div>
+          </div>
+          <div class="metric-block">
+            <div class="metric-value" id="panel-load">0%</div>
+            <div class="metric-label">Load</div>
+          </div>
+          <div class="metric-block">
+            <div class="metric-value" id="panel-idle">0s</div>
+            <div class="metric-label">Idle</div>
+          </div>
+        </div>
+
+        <!-- Layer 3: 底部辅助状态 -->
+        <div class="panel-footer">
+          <span class="hint-text" id="hint-text">Syncing...</span>
+          <span class="source-badge" id="source-badge">⟳ simulation</span>
+        </div>
+      </div>
+    `
+
+    this.panelSpeed = document.getElementById('panel-speed')!
+    this.panelActivity = document.getElementById('panel-activity')!
+    this.panelLoad = document.getElementById('panel-load')!
+    this.panelIdle = document.getElementById('panel-idle')!
+    this.pillText = document.getElementById('pill-text')!
+    this.hintText = document.getElementById('hint-text')!
+    this.sourceBadge = document.getElementById('source-badge')!
+    this.statusPill = document.getElementById('status-pill')!
+  }
+
+  private updateHUD(data: SensorData) {
+    if (this.panelSpeed) {
+      this.panelSpeed.textContent = data.typingSpeed.toFixed(1)
+    }
+    if (this.panelActivity) {
+      const pct = Math.round((data.keyboardActivity + data.mouseActivity) * 50)
+      this.panelActivity.textContent = `${pct}%`
+    }
+    if (this.panelLoad) {
+      const load = Math.min(100, data.typingSpeed * 12)
+      this.panelLoad.textContent = `${Math.round(load)}%`
+    }
+    if (this.panelIdle) {
+      const sec = Math.floor(data.idleTime / 1000)
+      this.panelIdle.textContent = sec < 60 ? `${sec}s` : `${Math.floor(sec / 60)}m ${sec % 60}s`
+    }
+    if (this.sourceBadge) {
+      this.sourceBadge.textContent = this.dataReceived ? '● main' : '⟳ simulation'
+      this.sourceBadge.style.color = this.dataReceived
+        ? 'rgba(110, 168, 255, 0.5)'
+        : 'rgba(255, 200, 100, 0.4)'
+    }
+    if (this.hintText) {
+      this.hintText.textContent = this.dataReceived ? 'Processing...' : 'Syncing...'
+    }
+  }
+
+  private updateStateBadge(state: MinimeState) {
+    if (!this.pillText || !this.statusPill) return
+
     const labels: Record<string, string> = {
-      idle: '💤 待机中',
-      typing: '⌨️ 打字中',
-      thinking: '🤔 思考中',
-      reminding: '🔔 提醒中',
-      sleeping: '😴 睡着了',
-      walking: '🚶 走动中',
+      idle: 'Idle', typing: 'Active', thinking: 'Thinking',
+      reminding: 'Alert', sleeping: 'Sleep', walking: 'Walking',
     }
-    if (this.stateIndicator) {
-      this.stateIndicator.textContent = labels[state] || state
+
+    const pillClasses: Record<string, string> = {
+      idle: 'active', typing: 'active', thinking: 'active',
+      reminding: 'alert', sleeping: 'warning', walking: 'active',
     }
-  }
 
-  // ============================================================
-  // 调试面板
-  // ============================================================
-
-  private createDebugPanel() {
-    this.debugPanel = document.createElement('div')
-    this.debugPanel.id = 'debug-panel'
-    this.debugPanel.style.cssText = `
-      position: absolute; top: 4px; left: 4px; right: 4px;
-      font-size: 10px; color: rgba(255,255,255,0.7);
-      font-family: monospace;
-      pointer-events: none;
-      display: flex; flex-direction: column; gap: 2px;
-    `
-    this.debugPanel.innerHTML = `
-      <div id="dbg-source">传感器: 等待中...</div>
-      <div id="dbg-kb">键盘: 0 键/秒</div>
-      <div id="dbg-mouse">鼠标: 0</div>
-      <div id="dbg-idle">空闲: 0s</div>
-    `
-    document.getElementById('app')?.appendChild(this.debugPanel)
-  }
-
-  private updateDebugPanel(data: SensorData) {
-    const source = document.getElementById('dbg-source')
-    const kb = document.getElementById('dbg-kb')
-    const mouse = document.getElementById('dbg-mouse')
-    const idle = document.getElementById('dbg-idle')
-    if (source) source.textContent = `传感器: ${this.dataReceived ? '主进程 ✓' : '模拟 🔄'}`
-    if (kb) kb.textContent = `键盘: ${data.typingSpeed.toFixed(1)} 键/秒 | 活跃: ${(data.keyboardActivity * 100).toFixed(0)}%`
-    if (mouse) mouse.textContent = `鼠标: ${(data.mouseActivity * 100).toFixed(0)}%`
-    if (idle) idle.textContent = `空闲: ${(data.idleTime / 1000).toFixed(0)}s`
+    this.pillText.textContent = labels[state] || 'Idle'
+    this.statusPill.className = `status-pill ${pillClasses[state] || 'active'}`
   }
 
   // ============================================================

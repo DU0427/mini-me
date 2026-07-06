@@ -1,113 +1,79 @@
 import * as THREE from 'three'
 
 // ============================================================
-// Three.js 场景初始化
+// 场景初始化 — Q版卡通风格
 // ============================================================
 
 export class SceneSetup {
   public scene: THREE.Scene
-  public camera: THREE.PerspectiveCamera
+  public camera: THREE.OrthographicCamera
   public renderer: THREE.WebGLRenderer
 
   constructor(canvas: HTMLCanvasElement) {
-    // 场景
     this.scene = new THREE.Scene()
 
-    // 透视相机 - 过肩视角，有立体感
+    // 2.5D 正交相机
     const aspect = canvas.width / canvas.height
-    this.camera = new THREE.PerspectiveCamera(40, aspect, 0.1, 100)
-    // 从右后方偏上观察，看到小人的侧面和前方的桌子
-    // 侧肩视角：避免身体遮挡键盘
-    this.camera.position.set(0, 5, -2.5)
-    this.camera.lookAt(0, -0.1, 0.5)
+    const viewSize = 1.8
+    this.camera = new THREE.OrthographicCamera(
+      -viewSize * aspect, viewSize * aspect,
+      viewSize, -viewSize, 0.1, 10
+    )
+    this.camera.position.set(0, 0.5, 1.8)
+    this.camera.lookAt(0, 0.2, 0)
 
     // 渲染器
-    this.renderer = new THREE.WebGLRenderer({
-      canvas,
-      alpha: true,
-      antialias: true,
-    })
+    this.renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true })
     this.renderer.setSize(canvas.width, canvas.height)
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-    this.renderer.setClearColor(0x000000, 0) // 完全透明背景
+    this.renderer.setClearColor(0x000000, 0)
     this.renderer.shadowMap.enabled = true
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping
+    this.renderer.toneMappingExposure = 1.0
 
-    // 光照
     this.setupLights()
-
-    // 背景 - 极淡的圆形光晕，让角色有存在感
-    this.setupBackground()
-
-    // 窗口大小变化
     window.addEventListener('resize', () => this.onResize(canvas))
   }
 
   private setupLights() {
-    // 环境光 - 基础照明
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6)
-    this.scene.add(ambientLight)
+    // 暖色环境光
+    const hemi = new THREE.HemisphereLight(0xffeedd, 0x667788, 0.5)
+    this.scene.add(hemi)
 
-    // 主光源 - 从左上角打光
-    const mainLight = new THREE.DirectionalLight(0xffffff, 1.0)
-    mainLight.position.set(5, 5, 5)
-    mainLight.castShadow = true
-    this.scene.add(mainLight)
+    // 主光源 — 暖白，右上前方
+    const main = new THREE.DirectionalLight(0xfff4e6, 1.0)
+    main.position.set(2.5, 4, 2.5)
+    this.scene.add(main)
 
-    // 补光 - 从右下角
-    const fillLight = new THREE.DirectionalLight(0xffeedd, 0.4)
-    fillLight.position.set(-3, -2, 4)
-    this.scene.add(fillLight)
+    // 补光 — 冷色，左后下方
+    const fill = new THREE.DirectionalLight(0xccddff, 0.35)
+    fill.position.set(-2, 1, 1.5)
+    this.scene.add(fill)
 
-    // 背光 - 勾勒轮廓
-    const rimLight = new THREE.DirectionalLight(0xffffff, 0.3)
-    rimLight.position.set(0, 0, -5)
-    this.scene.add(rimLight)
+    // 轮廓光 — 从背后打亮角色边缘
+    const rim = new THREE.DirectionalLight(0xffffff, 0.5)
+    rim.position.set(0, 2, -3)
+    this.scene.add(rim)
 
-    // 底部柔光
-    const bottomLight = new THREE.DirectionalLight(0x88ccff, 0.2)
-    bottomLight.position.set(0, -5, 3)
-    this.scene.add(bottomLight)
-
-    // 桌面重点补光，让键盘鼠标更清晰
-    const deskLight = new THREE.DirectionalLight(0xffffff, 0.8)
-    deskLight.position.set(0, 4, 1)
-    this.scene.add(deskLight)
-    // 正面柔光
-    const frontLight = new THREE.DirectionalLight(0xffffff, 0.3)
-    frontLight.position.set(0, 1, 5)
-    this.scene.add(frontLight)
+    // 底部暖光 — 给阴影区域一点暖色反弹
+    const bounce = new THREE.DirectionalLight(0xffcc88, 0.2)
+    bounce.position.set(0, -1, 0.5)
+    this.scene.add(bounce)
   }
 
+
+
   private onResize(canvas: HTMLCanvasElement) {
-    const width = canvas.clientWidth
-    const height = canvas.clientHeight
-    if (width === 0 || height === 0) return
-    this.renderer.setSize(width, height, false)
-    this.camera.aspect = width / height
+    const w = canvas.clientWidth, h = canvas.clientHeight
+    if (w === 0 || h === 0) return
+    this.renderer.setSize(w, h, false)
+    const aspect = w / h, vs = 1.8
+    this.camera.left = -vs * aspect; this.camera.right = vs * aspect
+    this.camera.top = vs; this.camera.bottom = -vs
     this.camera.updateProjectionMatrix()
   }
 
-  private setupBackground() {
-    // 极淡的圆形光晕 - 让角色看起来有"存在感"
-    const glowGeometry = new THREE.CircleGeometry(2.5, 32)
-    const glowMaterial = new THREE.MeshBasicMaterial({
-      color: 0xffffff,
-      transparent: true,
-      opacity: 0.08,
-      depthWrite: false,
-    })
-    const glow = new THREE.Mesh(glowGeometry, glowMaterial)
-    glow.position.set(0, -0.5, -1)
-    this.scene.add(glow)
-  }
-
-  render() {
-    this.renderer.render(this.scene, this.camera)
-  }
-
-  dispose() {
-    this.renderer.dispose()
-    this.scene.clear()
-  }
+  render() { this.renderer.render(this.scene, this.camera) }
+  dispose() { this.renderer.dispose(); this.scene.clear() }
 }

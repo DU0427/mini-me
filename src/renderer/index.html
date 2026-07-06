@@ -4,107 +4,280 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>minime</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
     html, body {
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      background: transparent;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      user-select: none;
-      -webkit-app-region: no-drag;
+      width: 100%; height: 100%;
+      overflow: hidden; background: transparent;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      user-select: none; -webkit-app-region: no-drag;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
     }
-    #app {
-      width: 100%;
-      height: 100%;
-      position: relative;
-    }
-    #three-canvas {
-      width: 100%;
-      height: 100%;
-      display: block;
-    }
-    #ui-overlay {
+
+    #app { width: 100%; height: 100%; position: relative; cursor: grab; }
+    #app:active { cursor: grabbing; }
+    #three-canvas { width: 100%; height: 100%; display: block; pointer-events: auto; }
+
+    /* ============================================================
+       SINGLE UNIFIED FLOATING UI PANEL — premium glassmorphism
+       ============================================================ */
+    #hud-container {
       position: absolute;
-      bottom: 10px;
-      left: 0;
-      right: 0;
-      display: flex;
-      justify-content: center;
-      gap: 8px;
-      pointer-events: auto;
-      opacity: 0;
-      transition: opacity 0.3s ease;
-    }
-    #ui-overlay.visible {
-      opacity: 1;
-    }
-    .reminder-bubble {
-      position: absolute;
-      top: -60px;
+      bottom: 16px;
       left: 50%;
       transform: translateX(-50%);
-      background: rgba(255, 255, 255, 0.95);
-      border-radius: 16px;
-      padding: 10px 16px;
-      font-size: 13px;
-      color: #333;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-      white-space: nowrap;
-      pointer-events: auto;
-      cursor: pointer;
-      animation: bubbleIn 0.3s ease;
+      z-index: 10;
+      pointer-events: none;
+      animation: panel-float-in 0.6s cubic-bezier(0.16, 1, 0.3, 1);
     }
-    .reminder-bubble::after {
+
+    @keyframes panel-float-in {
+      from { opacity: 0; transform: translateX(-50%) translateY(16px) scale(0.97); }
+      to   { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+    }
+
+    /* 主面板 — 高级毛玻璃 + 渐变边缘光 */
+    .unified-panel {
+      background: rgba(18, 20, 30, 0.65);
+      backdrop-filter: blur(24px) saturate(1.4);
+      -webkit-backdrop-filter: blur(24px) saturate(1.4);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 20px;
+      padding: 16px 20px;
+      min-width: 200px;
+      box-shadow:
+        0 8px 40px rgba(0, 0, 0, 0.35),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05),
+        0 0 0 1px rgba(255, 255, 255, 0.03);
+      pointer-events: auto;
+    }
+
+    /* 渐变边缘光 overlay */
+    .unified-panel::before {
       content: '';
       position: absolute;
-      bottom: -8px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 0;
-      height: 0;
-      border-left: 8px solid transparent;
-      border-right: 8px solid transparent;
-      border-top: 8px solid rgba(255, 255, 255, 0.95);
-    }
-    @keyframes bubbleIn {
-      from { opacity: 0; transform: translateX(-50%) translateY(10px); }
-      to { opacity: 1; transform: translateX(-50%) translateY(0); }
-    }
-    .btn {
-      padding: 6px 14px;
-      border: none;
+      inset: 0;
       border-radius: 20px;
+      padding: 1px;
+      background: linear-gradient(
+        135deg,
+        rgba(110, 168, 255, 0.12) 0%,
+        transparent 40%,
+        transparent 60%,
+        rgba(110, 168, 255, 0.06) 100%
+      );
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      pointer-events: none;
+    }
+
+    /* ---- Layer 1: 状态胶囊 + 标题 ---- */
+    .panel-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 12px 3px 10px;
+      border-radius: 100px;
+      background: rgba(110, 168, 255, 0.12);
+      border: 1px solid rgba(110, 168, 255, 0.15);
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.8);
+    }
+    .status-pill .dot {
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: #6EA8FF;
+      animation: pill-glow 2s ease-in-out infinite;
+    }
+    @keyframes pill-glow {
+      0%, 100% { box-shadow: 0 0 3px rgba(110, 168, 255, 0.4); }
+      50% { box-shadow: 0 0 8px rgba(110, 168, 255, 0.8); }
+    }
+
+    .panel-header .panel-title {
+      font-size: 9px;
+      font-weight: 500;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.3);
+      margin-left: auto;
+    }
+
+    /* ---- Layer 2: 2×2 指标网格 ---- */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px 14px;
+      margin-bottom: 12px;
+    }
+
+    .metric-block {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+
+    .metric-value {
+      font-size: 20px;
+      font-weight: 700;
+      color: rgba(255, 255, 255, 0.92);
+      letter-spacing: -0.5px;
+      line-height: 1.15;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .metric-label {
+      font-size: 8px;
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.3);
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    /* ---- Layer 3: 底部辅助状态 ---- */
+    .panel-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: 10px;
+      border-top: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    .hint-text {
+      font-size: 9px;
+      font-weight: 400;
+      color: rgba(255, 255, 255, 0.25);
+      letter-spacing: 0.2px;
+    }
+
+    .source-badge {
+      font-size: 8px;
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.25);
+      letter-spacing: 0.3px;
+    }
+
+    /* ---- 状态色变体 ---- */
+    .status-pill.active   { background: rgba(110, 168, 255, 0.15); border-color: rgba(110, 168, 255, 0.25); }
+    .status-pill.success  { background: rgba(74, 222, 128, 0.12); border-color: rgba(74, 222, 128, 0.2); }
+    .status-pill.warning  { background: rgba(251, 191, 36, 0.12); border-color: rgba(251, 191, 36, 0.2); }
+    .status-pill.alert    { background: rgba(248, 113, 113, 0.12); border-color: rgba(248, 113, 113, 0.2); }
+
+    .status-pill.active  .dot { background: #6EA8FF; }
+    .status-pill.success .dot { background: #4ADE80; }
+    .status-pill.warning .dot { background: #FBBF24; }
+    .status-pill.alert   .dot { background: #F87171; }
+
+    /* ============================================================
+       提醒气泡 — 与统一面板风格一致
+       ============================================================ */
+    #ui-overlay {
+      position: absolute;
+      bottom: 82px; left: 50%; transform: translateX(-50%);
+      pointer-events: none; opacity: 0;
+      transition: opacity 0.4s ease; z-index: 20;
+    }
+    #ui-overlay.visible { opacity: 1; }
+
+    .reminder-bubble {
+      background: rgba(18, 20, 30, 0.75);
+      backdrop-filter: blur(24px) saturate(1.4);
+      -webkit-backdrop-filter: blur(24px) saturate(1.4);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      padding: 12px 20px;
       font-size: 12px;
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.9);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      pointer-events: auto;
       cursor: pointer;
-      transition: all 0.2s;
+      white-space: nowrap;
+      animation: bubble-in 0.35s cubic-bezier(0.16, 1, 0.3, 1);
     }
-    .btn-primary {
-      background: #6366f1;
-      color: white;
+    .reminder-bubble::before { content: '🔔 '; font-size: 11px; }
+
+    @keyframes bubble-in {
+      from { opacity: 0; transform: translateY(8px) scale(0.95); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
     }
-    .btn-primary:hover {
-      background: #4f46e5;
+
+    /* ============================================================
+       状态消息气泡 — 角色头顶文字
+       ============================================================ */
+    #state-bubble-container {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      z-index: 15;
     }
-    .btn-secondary {
-      background: #e5e7eb;
-      color: #374151;
+
+    .state-bubble {
+      background: rgba(255, 255, 255, 0.92);
+      border-radius: 12px;
+      padding: 6px 14px;
+      font-size: 11px;
+      font-weight: 500;
+      color: rgba(30, 35, 50, 0.85);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.10);
+      white-space: nowrap;
+      position: relative;
+      animation: bubble-pop 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      transform-origin: bottom center;
     }
-    .btn-secondary:hover {
-      background: #d1d5db;
+
+    .state-bubble::after {
+      content: '';
+      position: absolute;
+      bottom: -5px; left: 50%;
+      transform: translateX(-50%);
+      width: 8px; height: 8px;
+      background: rgba(255, 255, 255, 0.92);
+      clip-path: polygon(0 0, 100% 0, 50% 100%);
+    }
+
+    @keyframes bubble-pop {
+      from { opacity: 0; transform: scale(0.7) translateY(10px); }
+      to   { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    .state-bubble.fade-out {
+      animation: bubble-fade 0.3s ease forwards;
+    }
+
+    @keyframes bubble-fade {
+      to { opacity: 0; transform: scale(0.8) translateY(-8px); }
     }
   </style>
 </head>
 <body>
   <div id="app">
     <canvas id="three-canvas"></canvas>
+    <div id="hud-container">
+      <!-- Single unified panel rendered here -->
+    </div>
     <div id="ui-overlay">
-      <!-- Reminder bubbles and action buttons rendered here -->
+      <!-- Reminder bubbles here -->
+    </div>
+    <div id="state-bubble-container">
+      <!-- 状态消息气泡 (dynamic) -->
     </div>
   </div>
   <script type="module" src="./main.ts"></script>

@@ -57,6 +57,7 @@ export const IPC_CHANNELS = {
   DAILY_STATS: 'stats:daily',
   WINDOW_CONTROL: 'window:control',
   SCREEN_FRAME: 'screen:frame',
+  ICON_DATA: 'icon:data',
 } as const
 
 /** 每日统计数据 */
