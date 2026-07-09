@@ -194,8 +194,11 @@ export class MinimeApp {
     const meta = typeMeta[event.type] || { icon: '🔔', accent: '#6EA8FF' }
 
     bubble.innerHTML = `
-      <span class="bubble-icon">${meta.icon}</span>
-      <span class="bubble-msg">${event.message}</span>
+      <div class="bubble-body">
+        <span class="bubble-icon">${meta.icon}</span>
+        <span class="bubble-msg">${event.message}</span>
+      </div>
+      <div class="bubble-tail"></div>
     `
 
     // 点击 = 完成
